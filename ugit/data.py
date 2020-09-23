@@ -1,19 +1,22 @@
 import os
 import hashlib
+import shutil
 
 GIT_DIR = '.ugit'
 
 
 def init():
+    if os.path.exists(GIT_DIR):
+        shutil.rmtree(GIT_DIR)
     os.makedirs(GIT_DIR, exist_ok=True)
     os.makedirs(f'{GIT_DIR}/objects', exist_ok=True)
     print(
         f'Initialised empty ugit repository in {os.getcwd()}{os.sep}{GIT_DIR}')
 
 
-def hash_object(obj, ob_type='blob'):
+def hash_object(data, obj_type='blob'):
     # Add type header
-    obj = ob_type.encode() + b'x\00' + obj
+    obj = obj_type.encode() + b'\x00' + data
 
     oid = hashlib.sha1(obj).hexdigest()
     with open(f'{GIT_DIR}/objects/{oid}', 'wb') as f:
