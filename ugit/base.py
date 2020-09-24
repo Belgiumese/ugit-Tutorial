@@ -11,22 +11,28 @@ def write_tree(directory='.'):
     oid = None
     file_type = None
 
+    # For every file/directory in the current directory
     with os.scandir(directory) as direct:
         for entry in direct:
             file_path = f'{directory}{os.sep}{entry.name}'
 
             if (is_ignored(file_path)):
+                # Ignore things like '.ugit'
                 continue
             elif entry.is_file(follow_symlinks=False):
+                # If it's a file, hash it as a blob.
                 file_type = 'blob'
                 with open(file_path, 'rb') as f:
                     oid = data.hash_object(f.read())
             elif entry.is_dir(follow_symlinks=False):
+                # If it's a directory, hash it as another tree recursively.
                 file_type = 'tree'
                 oid = write_tree(file_path)
 
             entries.append((entry.name, oid, file_type))
 
+    # Our tree is a list of all the entries in this directory
+    # with their file type, oid, and file name.
     tree = ''.join(f'{file_type} {oid} {name}\n' for name,
                    oid, file_type in sorted(entries))
     return data.hash_object(tree.encode(), 'tree')
@@ -120,3 +126,9 @@ def get_commit(oid):
 
     message = ''.join(lines)
     return Commit(tree=tree, parent=parent, message=message)
+
+
+def checkout(oid):
+    commit = get_commit(oid)
+    read_tree(commit.tree)
+    data.set_HEAD(oid)
