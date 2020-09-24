@@ -1,6 +1,7 @@
 import os
 import hashlib
 import shutil
+import string
 
 GIT_DIR = '.ugit'
 
@@ -39,15 +40,28 @@ def get_object(oid, expected='blob'):
     return content
 
 
-def set_HEAD(oid):
-    with open(f'{GIT_DIR}/HEAD', 'w') as f:
+def update_ref(ref, oid):
+    # Keep track of refs just by storing the OID in a file with name
+    path = f'{GIT_DIR}/{ref}'
+    # If it doesn't already exist, create this path
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, 'w') as f:
         f.write(oid)
 
 
-def get_HEAD():
-    head_path = f'{GIT_DIR}/HEAD'
-    if (os.path.isfile(head_path)):
-        with open(head_path) as f:
+def get_ref(ref):
+    # Open the ref file with name ref and get the OID from it
+    ref_path = f'{GIT_DIR}/{ref}'
+    if (os.path.isfile(ref_path)):
+        with open(ref_path) as f:
             return f.read().strip()
     else:
         return None
+
+
+def is_oid(name):
+    if len(name) != 40:
+        return False
+
+    is_hex = all(c in string.hexdigits for c in name)
+    return is_hex

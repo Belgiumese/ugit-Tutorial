@@ -90,7 +90,7 @@ def commit(message):
     commit_msg = f'tree {write_tree()}\n'
 
     # Add link to previous HEAD (parent) if it exists
-    head = data.get_HEAD()
+    head = data.get_ref('HEAD')
     if (head):
         commit_msg += f'parent {head}\n'
 
@@ -100,7 +100,7 @@ def commit(message):
 
     # Hash the commit itself and set the head to it
     oid = data.hash_object(commit_msg.encode(), 'commit')
-    data.set_HEAD(oid)
+    data.update_ref('HEAD', oid)
 
     return oid
 
@@ -131,4 +131,30 @@ def get_commit(oid):
 def checkout(oid):
     commit = get_commit(oid)
     read_tree(commit.tree)
-    data.set_HEAD(oid)
+    data.update_ref('HEAD', oid)
+
+
+def create_tag(ref, oid):
+    data.update_ref(f'refs/tags/{ref}', oid)
+
+
+# if it's a ref, get the OID. otherwise, just return the OID.
+def get_oid(name):
+    # If it's an OID, just return that
+    if data.is_oid(name):
+        return name
+
+    # Try all the different places that a ref could be stored
+    refs_to_try = [
+        f'{name}',
+        f'refs/{name}',
+        f'refs/tags/{name}',
+        f'refs/tags/heads/{name}'
+    ]
+
+    for ref_to_try in refs_to_try:
+        oid = data.get_ref(ref_to_try)
+        if (oid):
+            return oid
+
+    raise IOError(f'Unknown name "{name}"')
