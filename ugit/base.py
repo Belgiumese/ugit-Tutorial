@@ -1,6 +1,9 @@
 import os
 import shutil
+from collections import namedtuple
 from . import data
+
+Commit = namedtuple('Commit', ['tree', 'parent', 'message'])
 
 
 def write_tree(directory='.'):
@@ -74,3 +77,46 @@ def read_tree(tree_oid):
 
 def is_ignored(path):
     return '.ugit' in path.split(os.sep)
+
+
+def commit(message):
+    # Link to the new tree of contents
+    commit_msg = f'tree {write_tree()}\n'
+
+    # Add link to previous HEAD (parent) if it exists
+    head = data.get_HEAD()
+    if (head):
+        commit_msg += f'parent {head}\n'
+
+    # Add commit message
+    commit_msg += '\n'
+    commit_msg += f'{message}\n'
+
+    # Hash the commit itself and set the head to it
+    oid = data.hash_object(commit_msg.encode(), 'commit')
+    data.set_HEAD(oid)
+
+    return oid
+
+
+def get_commit(oid):
+    commit = data.get_object(oid, 'commit').decode()
+    parent = None
+    tree = None
+
+    lines = iter(commit.splitlines())
+    for line in lines:
+        if (len(line) == 0):
+            # This is the message separator
+            break
+
+        key, val = line.split(' ', 1)
+        if key == 'tree':
+            tree = val
+        elif key == 'parent':
+            parent = val
+        else:
+            raise IOError(f'Unknown commit field {key}')
+
+    message = ''.join(lines)
+    return Commit(tree=tree, parent=parent, message=message)
